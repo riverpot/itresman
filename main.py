@@ -7,28 +7,54 @@
 多维度监控。
 """
 
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+from database import init_db
+from routers import auth
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="基于云计算的企业IT资源管理系统",
     description="基于云计算的企业IT资源管理系统",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = [
+        {"loc": e["loc"], "msg": e["msg"], "type": e["type"]}
+        for e in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={"code": "ERR_VALIDATION", "message": "请求参数校验失败", "detail": errors},
+    )
+
+app.include_router(auth.router)
 
 
 @app.get("/")
 async def read_root():
-    """根路径，返回欢迎消息"""
     return {"message": "Hello ! 欢迎进入基于云计算的企业IT资源管理系统"}
 
 
 @app.get("/health")
 async def health_check():
-    """健康检查接口"""
     return {"status": "healthy", "service": "健康检查"}
 
 
 if __name__ == "__main__":
     import uvicorn
-    # 开发模式启动，支持热重载
     uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)

@@ -8,3 +8,13 @@ wheels/
 
 # Virtual environments
 .venv
+
+# SQLite database
+*.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# pytest
+.pytest_cache/
